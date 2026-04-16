@@ -1,0 +1,32 @@
+name: language_teacher_app
+description: "A language teacher app powered by Claude AI."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.0
+  riverpod_annotation: ^2.3.5
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.0.2
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.2.2
+  dio: ^5.4.3
+  go_router: ^13.2.0
+  flutter_animate: ^4.5.0
+  permission_handler: ^11.3.1
+  uuid: ^4.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.9
+  riverpod_generator: ^2.4.0
+
+flutter:
+  uses-material-design: true
