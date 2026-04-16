@@ -1,5 +1,5 @@
 import 'package:go_router/go_router.dart';
-import '../screens/conversation_screen.dart';
+import '../screens/main_screen.dart';
 import '../screens/analysis_screen.dart';
 import '../screens/settings_screen.dart';
 
@@ -8,7 +8,7 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const ConversationScreen(),
+      builder: (context, state) => const MainScreen(),
     ),
     GoRoute(
       path: '/settings',

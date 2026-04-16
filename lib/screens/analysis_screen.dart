@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
+import '../providers/app_mode_provider.dart';
 import '../providers/conversation_provider.dart';
 import '../services/claude_service.dart';
 
@@ -265,7 +267,47 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                     style: const TextStyle(color: AppColors.textPrimary)),
               ),
             )),
+        _buildWeakAreasBanner(),
       ],
+    );
+  }
+
+  Widget _buildWeakAreasBanner() {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2a2740),
+        border: Border.all(color: const Color(0xFF3c3770)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Text('🎯', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Seznam oblastí byl aktualizován',
+              style: TextStyle(color: Color(0xFFAFA9EC), fontSize: 13),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(appModeProvider.notifier).setMode(AppMode.test);
+              context.go('/');
+            },
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Přejít na Test →',
+              style: TextStyle(color: Color(0xFF4ec9b0), fontSize: 12),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

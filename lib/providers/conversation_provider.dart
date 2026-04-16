@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/message.dart';
 import '../models/user_settings.dart';
@@ -5,6 +6,7 @@ import '../services/claude_service.dart';
 import '../services/speech_service.dart';
 import 'settings_provider.dart';
 import 'input_mode_provider.dart' show speechServiceProvider;
+import 'weak_areas_provider.dart';
 
 enum ConversationStatus { idle, loading, speaking, error }
 
@@ -13,7 +15,7 @@ class ConversationState {
   final ConversationStatus status;
   final String? errorMessage;
   final bool isSpeaking;
-  final int analyzedUpTo; // index up to which messages have been analyzed
+  final int analyzedUpTo;
 
   const ConversationState({
     this.messages = const [],
@@ -54,7 +56,8 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
 
   UserSettings get _settings => _ref.read(settingsProvider);
 
-  Future<void> sendMessage(String text, {MessageType type = MessageType.text}) async {
+  Future<void> sendMessage(String text,
+      {MessageType type = MessageType.text}) async {
     if (text.trim().isEmpty) return;
 
     final userMsg = Message(
@@ -84,9 +87,11 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       );
 
       if (type == MessageType.voice) {
-        state = state.copyWith(isSpeaking: true, status: ConversationStatus.speaking);
+        state = state.copyWith(
+            isSpeaking: true, status: ConversationStatus.speaking);
         await _speechService.speak(response, _settings.targetLanguage.locale);
-        state = state.copyWith(isSpeaking: false, status: ConversationStatus.idle);
+        state = state.copyWith(
+            isSpeaking: false, status: ConversationStatus.idle);
       }
     } on ApiKeyMissingException catch (e) {
       state = state.copyWith(
@@ -103,9 +108,15 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
 
   Future<AnalysisResult> analyzeConversation() async {
     final newMessages = state.unanalyzedMessages;
-    final result = await _claudeService.analyzeConversation(newMessages, _settings);
-    // Mark all current messages as analyzed
+    final result =
+        await _claudeService.analyzeConversation(newMessages, _settings);
     state = state.copyWith(analyzedUpTo: state.messages.length);
+
+    // Update weak areas in the background — ignore failures
+    unawaited(
+      _ref.read(weakAreasProvider.notifier).updateFromAnalysis(result),
+    );
+
     return result;
   }
 
@@ -114,11 +125,13 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   }
 
   void clearError() {
-    state = state.copyWith(status: ConversationStatus.idle, errorMessage: null);
+    state = state.copyWith(
+        status: ConversationStatus.idle, errorMessage: null);
   }
 }
 
-final claudeServiceProvider = Provider<ClaudeService>((ref) => ClaudeService());
+final claudeServiceProvider =
+    Provider<ClaudeService>((ref) => ClaudeService());
 
 final conversationProvider =
     StateNotifierProvider<ConversationNotifier, ConversationState>((ref) {

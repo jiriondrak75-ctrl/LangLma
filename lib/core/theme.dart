@@ -13,6 +13,7 @@ class AppColors {
   static const textHint = Color(0xFF6a6a6a);
   static const colorGreen = Color(0xFF4ec9b0);
   static const colorRed = Color(0xFFf44747);
+  static const colorOrange = Color(0xFFce9178);
   static const colorYellow = Color(0xFFdcdcaa);
 
   static const userBubbleBg = Color(0xFF2a2740);
