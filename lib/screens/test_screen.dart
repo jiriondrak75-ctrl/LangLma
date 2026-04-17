@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme.dart';
 import '../models/weak_area.dart';
@@ -257,18 +258,57 @@ class _TestWidgetState extends ConsumerState<TestWidget> {
   // ---------- Loading state ----------
 
   Widget _buildLoading() {
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      itemBuilder: (_, _) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        height: 100,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceColor,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.borderColor),
+      children: [
+        const SizedBox(height: 24),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderColor),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(3, (i) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.accentSecondary,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                      .animate(onPlay: (c) => c.repeat())
+                      .fadeIn(
+                        delay: Duration(milliseconds: i * 200),
+                        duration: const Duration(milliseconds: 400),
+                      )
+                      .then()
+                      .fadeOut(duration: const Duration(milliseconds: 400)),
+                );
+              }),
+            ),
+          ),
         ),
-      ),
+        const SizedBox(height: 20),
+        ...List.generate(
+          5,
+          (_) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            height: 100,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceColor,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.borderColor),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -353,7 +393,7 @@ class _TestWidgetState extends ConsumerState<TestWidget> {
                           style: const TextStyle(
                               color: AppColors.textPrimary)),
                     ),
-                    if (trailingIcon != null) trailingIcon,
+                    ?trailingIcon,
                   ],
                 ),
               ),

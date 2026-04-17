@@ -24,6 +24,7 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
   bool _isRecording = false;
   int _recordingSeconds = 0;
   Timer? _recordingTimer;
+  bool _bottomBarExpanded = true;
 
   @override
   void dispose() {
@@ -49,6 +50,7 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
     _textController.clear();
+    FocusScope.of(context).unfocus();
     await ref.read(conversationProvider.notifier).sendMessage(text);
     _scrollToBottom();
   }
@@ -159,7 +161,45 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
                   },
                 ),
         ),
-        _buildBottomBar(convState),
+        _buildCollapsibleBar(convState),
+      ],
+    );
+  }
+
+  Widget _buildCollapsibleBar(ConversationState convState) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: () =>
+              setState(() => _bottomBarExpanded = !_bottomBarExpanded),
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceColor,
+              border: Border(top: BorderSide(color: AppColors.borderColor)),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Center(
+              child: AnimatedRotation(
+                turns: _bottomBarExpanded ? 0 : 0.5,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(Icons.keyboard_arrow_down,
+                    color: AppColors.textHint, size: 18),
+              ),
+            ),
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          child: SizedBox(
+            height: _bottomBarExpanded ? null : 0,
+            child: _buildBottomBar(convState, extraBottomPadding: bottomInset),
+          ),
+        ),
+        if (!_bottomBarExpanded) SizedBox(height: bottomInset),
       ],
     );
   }
@@ -316,7 +356,8 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
     );
   }
 
-  Widget _buildBottomBar(ConversationState convState) {
+  Widget _buildBottomBar(ConversationState convState,
+      {double extraBottomPadding = 0}) {
     final isLoading = convState.status == ConversationStatus.loading;
 
     return Container(
@@ -324,7 +365,7 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
         color: AppColors.surfaceColor,
         border: Border(top: BorderSide(color: AppColors.borderColor)),
       ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: EdgeInsets.fromLTRB(12, 8, 12, 12 + extraBottomPadding),
       child: Row(
         children: [
           Expanded(

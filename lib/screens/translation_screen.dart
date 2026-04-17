@@ -191,7 +191,9 @@ class _TranslationWidgetState extends ConsumerState<TranslationWidget> {
             ),
           ),
         ),
-        if (_evaluation == null) _buildInputBar(),
+        if (_evaluation == null) _buildInputBar(
+          extraBottomPadding: MediaQuery.paddingOf(context).bottom,
+        ),
       ],
     );
   }
@@ -331,7 +333,7 @@ class _TranslationWidgetState extends ConsumerState<TranslationWidget> {
     );
   }
 
-  Widget _buildInputBar() {
+  Widget _buildInputBar({double extraBottomPadding = 0}) {
     final isLoading = _loadingEvaluation;
 
     return Container(
@@ -339,7 +341,7 @@ class _TranslationWidgetState extends ConsumerState<TranslationWidget> {
         color: AppColors.surfaceColor,
         border: Border(top: BorderSide(color: AppColors.borderColor)),
       ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: EdgeInsets.fromLTRB(12, 8, 12, 12 + extraBottomPadding),
       child: Row(
         children: [
           Expanded(

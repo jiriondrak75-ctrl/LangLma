@@ -154,6 +154,7 @@ class ClaudeService {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
     };
     return dio;
   }
@@ -421,6 +422,7 @@ Focus area: ${selectedArea.category} — ${selectedArea.description}
 
 Generate exactly 5 multiple choice questions targeting this weak area.
 Each question must have exactly 4 options (A/B/C/D), only one correct.
+IMPORTANT: Each question must be clearly different — vary the sentence structure, vocabulary, context, and grammar patterns. Do NOT repeat the same sentence with minor word swaps.
 
 Return ONLY valid JSON array:
 [
@@ -439,7 +441,7 @@ No markdown, no extra text.''';
       _baseUrl,
       data: {
         'model': _model,
-        'max_tokens': 1024,
+        'max_tokens': 2048,
         'system': systemPrompt,
         'messages': [
           {'role': 'user', 'content': 'Generate the test questions.'}
