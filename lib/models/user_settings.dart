@@ -1,5 +1,20 @@
 enum InputMode { text, voice }
 
+enum AiProvider {
+  claude,
+  gemini;
+
+  String get displayName => switch (this) {
+        AiProvider.claude => 'Claude (Anthropic)',
+        AiProvider.gemini => 'Gemini (Google)',
+      };
+
+  String get description => switch (this) {
+        AiProvider.claude => 'Anthropic API — claude-opus-4-5',
+        AiProvider.gemini => 'Google AI API — gemini-2.0-flash',
+      };
+}
+
 enum Language {
   english,
   german,
@@ -93,6 +108,7 @@ class UserSettings {
   final LanguageLevel level;
   final InputMode inputMode;
   final String teachingStyle;
+  final AiProvider aiProvider;
 
   const UserSettings({
     this.name = '',
@@ -102,6 +118,7 @@ class UserSettings {
     this.level = LanguageLevel.intermediate,
     this.inputMode = InputMode.text,
     this.teachingStyle = 'Přátelský',
+    this.aiProvider = AiProvider.claude,
   });
 
   UserSettings copyWith({
@@ -112,6 +129,7 @@ class UserSettings {
     LanguageLevel? level,
     InputMode? inputMode,
     String? teachingStyle,
+    AiProvider? aiProvider,
   }) {
     return UserSettings(
       name: name ?? this.name,
@@ -121,6 +139,7 @@ class UserSettings {
       level: level ?? this.level,
       inputMode: inputMode ?? this.inputMode,
       teachingStyle: teachingStyle ?? this.teachingStyle,
+      aiProvider: aiProvider ?? this.aiProvider,
     );
   }
 }

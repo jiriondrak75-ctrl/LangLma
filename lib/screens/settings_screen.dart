@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
+import '../models/user_settings.dart';
 import '../providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -14,17 +15,22 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _nameController;
   late TextEditingController _apiKeyController;
+  late TextEditingController _geminiApiKeyController;
   String _gender = 'Neuvedeno';
   String _nativeLanguage = 'Čeština';
   String _teachingStyle = 'Přátelský';
   bool _obscureApiKey = true;
+  bool _obscureGeminiApiKey = true;
   bool _loading = true;
+
+  AiProvider _selectedProvider = AiProvider.claude;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
     _apiKeyController = TextEditingController();
+    _geminiApiKeyController = TextEditingController();
     _loadData();
   }
 
@@ -32,12 +38,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.read(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
     final apiKey = await notifier.getApiKey();
+    final geminiApiKey = await notifier.getGeminiApiKey();
     setState(() {
       _nameController.text = settings.name;
       _gender = settings.gender;
       _nativeLanguage = settings.nativeLanguage;
       _teachingStyle = settings.teachingStyle;
       _apiKeyController.text = apiKey;
+      _geminiApiKeyController.text = geminiApiKey;
+      _selectedProvider = settings.aiProvider;
       _loading = false;
     });
   }
@@ -46,6 +55,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void dispose() {
     _nameController.dispose();
     _apiKeyController.dispose();
+    _geminiApiKeyController.dispose();
     super.dispose();
   }
 
@@ -58,8 +68,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         gender: _gender,
         nativeLanguage: _nativeLanguage,
         teachingStyle: _teachingStyle,
+        aiProvider: _selectedProvider,
       ));
-      await notifier.saveApiKey(_apiKeyController.text.trim());
+      if (_apiKeyController.text.trim().isNotEmpty) {
+        await notifier.saveApiKey(_apiKeyController.text.trim());
+      }
+      if (_geminiApiKeyController.text.trim().isNotEmpty) {
+        await notifier.saveGeminiApiKey(_geminiApiKeyController.text.trim());
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Uloženo')),
@@ -132,6 +148,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 16),
             _buildSectionCard(
+              title: 'AI Provider',
+              children: [
+                _buildProviderTile(AiProvider.claude),
+                _buildProviderTile(AiProvider.gemini),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(
               title: 'Claude API',
               children: [
                 _buildField(
@@ -141,7 +165,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     obscureText: _obscureApiKey,
                     style: const TextStyle(color: AppColors.colorYellow),
                     decoration: InputDecoration(
-                      hintText: 'Uloženo bezpečně v zařízení',
+                      hintText: 'sk-ant-...',
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscureApiKey
@@ -151,6 +175,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                         onPressed: () =>
                             setState(() => _obscureApiKey = !_obscureApiKey),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildSectionCard(
+              title: 'Gemini API',
+              children: [
+                _buildField(
+                  label: 'API klíč',
+                  child: TextFormField(
+                    controller: _geminiApiKeyController,
+                    obscureText: _obscureGeminiApiKey,
+                    style: const TextStyle(color: AppColors.colorYellow),
+                    decoration: InputDecoration(
+                      hintText: 'AIzaSy...',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureGeminiApiKey
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: AppColors.textSecondary,
+                        ),
+                        onPressed: () => setState(
+                            () => _obscureGeminiApiKey = !_obscureGeminiApiKey),
                       ),
                     ),
                   ),
@@ -182,6 +233,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Uložit', style: TextStyle(fontSize: 16)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProviderTile(AiProvider provider) {
+    final isSelected = _selectedProvider == provider;
+    return InkWell(
+      onTap: () => setState(() => _selectedProvider = provider),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.accentPrimary
+                        : AppColors.textSecondary,
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                    ? Center(
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.accentPrimary,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    provider.displayName,
+                    style: TextStyle(
+                      color: isSelected
+                          ? AppColors.accentSecondary
+                          : AppColors.textPrimary,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  Text(
+                    provider.description,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

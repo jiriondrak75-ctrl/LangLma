@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/weak_area.dart';
 import '../models/user_settings.dart';
-import '../services/claude_service.dart';
+import '../services/ai_service.dart';
 import 'settings_provider.dart';
+import 'ai_service_provider.dart';
 
 class WeakAreasNotifier extends StateNotifier<List<WeakArea>> {
   final Ref _ref;
@@ -51,12 +52,24 @@ class WeakAreasNotifier extends StateNotifier<List<WeakArea>> {
     await _load(_currentKey!);
   }
 
+  void incrementProgress(String weakAreaId) {
+    final updated = state.map((area) {
+      if (area.id != weakAreaId) return area;
+      final newProgress = (area.masteryProgress + 10).clamp(0, 100);
+      return area.copyWith(masteryProgress: newProgress);
+    }).toList();
+
+    final filtered = updated.where((a) => a.masteryProgress < 100).toList();
+    state = filtered;
+    if (_currentKey != null) _save(_currentKey!, filtered);
+  }
+
   Future<void> updateFromAnalysis(AnalysisResult analysis) async {
     try {
       final settings = _ref.read(settingsProvider);
-      final claudeService = ClaudeService();
+      final aiService = _ref.read(aiServiceProvider);
       final updated =
-          await claudeService.extractWeakAreas(analysis, state, settings);
+          await aiService.extractWeakAreas(analysis, state, settings);
       _currentKey ??= _keyFor(settings.targetLanguage);
       await _save(_currentKey!, updated);
       state = updated;

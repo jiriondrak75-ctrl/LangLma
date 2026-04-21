@@ -16,15 +16,19 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
     final levelIndex =
         prefs.getInt('level') ?? LanguageLevel.intermediate.index;
     final inputModeIndex = prefs.getInt('inputMode') ?? InputMode.text.index;
+    final aiProviderIndex =
+        (prefs.getInt('aiProvider') ?? AiProvider.claude.index)
+            .clamp(0, AiProvider.values.length - 1);
 
     state = UserSettings(
       name: prefs.getString('name') ?? '',
       gender: prefs.getString('gender') ?? 'Neuvedeno',
       nativeLanguage: prefs.getString('nativeLanguage') ?? 'Čeština',
-      targetLanguage: Language.values[langIndex],
-      level: LanguageLevel.values[levelIndex],
-      inputMode: InputMode.values[inputModeIndex],
+      targetLanguage: Language.values[langIndex.clamp(0, Language.values.length - 1)],
+      level: LanguageLevel.values[levelIndex.clamp(0, LanguageLevel.values.length - 1)],
+      inputMode: InputMode.values[inputModeIndex.clamp(0, InputMode.values.length - 1)],
       teachingStyle: prefs.getString('teachingStyle') ?? 'Přátelský',
+      aiProvider: AiProvider.values[aiProviderIndex],
     );
   }
 
@@ -37,6 +41,7 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
     await prefs.setInt('level', settings.level.index);
     await prefs.setInt('inputMode', settings.inputMode.index);
     await prefs.setString('teachingStyle', settings.teachingStyle);
+    await prefs.setInt('aiProvider', settings.aiProvider.index);
     state = settings;
   }
 
@@ -52,10 +57,8 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
   }
 
   Future<void> saveApiKey(String key) async {
-    // Always write to SharedPreferences (reliable on all platforms incl. web)
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('api_key_fallback', key);
-    // Also attempt secure storage
     try {
       await _storage.write(key: 'claude_api_key', value: key);
     } catch (_) {}
@@ -66,10 +69,27 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
       final key = await _storage.read(key: 'claude_api_key');
       if (key != null && key.isNotEmpty) return key;
     } catch (_) {}
-    // Fallback to SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('api_key_fallback') ?? '';
   }
+
+  Future<void> saveGeminiApiKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('gemini_api_key_fallback', key);
+    try {
+      await _storage.write(key: 'gemini_api_key', value: key);
+    } catch (_) {}
+  }
+
+  Future<String> getGeminiApiKey() async {
+    try {
+      final key = await _storage.read(key: 'gemini_api_key');
+      if (key != null && key.isNotEmpty) return key;
+    } catch (_) {}
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('gemini_api_key_fallback') ?? '';
+  }
+
 }
 
 final settingsProvider =

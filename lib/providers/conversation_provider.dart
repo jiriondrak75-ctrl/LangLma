@@ -2,11 +2,12 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/message.dart';
 import '../models/user_settings.dart';
-import '../services/claude_service.dart';
+import '../services/ai_service.dart';
 import '../services/speech_service.dart';
 import 'settings_provider.dart';
 import 'input_mode_provider.dart' show speechServiceProvider;
 import 'weak_areas_provider.dart';
+import 'ai_service_provider.dart';
 
 enum ConversationStatus { idle, loading, speaking, error }
 
@@ -26,7 +27,6 @@ class ConversationState {
   });
 
   bool get hasNewMessages => messages.length > analyzedUpTo;
-
   List<Message> get unanalyzedMessages => messages.sublist(analyzedUpTo);
 
   ConversationState copyWith({
@@ -47,17 +47,17 @@ class ConversationState {
 }
 
 class ConversationNotifier extends StateNotifier<ConversationState> {
-  final ClaudeService _claudeService;
   final SpeechService _speechService;
   final Ref _ref;
 
-  ConversationNotifier(this._claudeService, this._speechService, this._ref)
+  ConversationNotifier(this._speechService, this._ref)
       : super(const ConversationState());
 
   UserSettings get _settings => _ref.read(settingsProvider);
+  AiService get _ai => _ref.read(aiServiceProvider);
 
   Future<void> sendMessage(String text,
-      {MessageType type = MessageType.text}) async {
+      {MessageType type = MessageType.text, bool hidden = false}) async {
     if (text.trim().isEmpty) return;
 
     final userMsg = Message(
@@ -67,20 +67,18 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
     );
 
     state = state.copyWith(
-      messages: [...state.messages, userMsg],
+      messages: hidden ? state.messages : [...state.messages, userMsg],
       status: ConversationStatus.loading,
       errorMessage: null,
     );
 
     try {
-      final response =
-          await _claudeService.sendMessage(state.messages, _settings);
+      final messagesForAi = hidden
+          ? [...state.messages, userMsg]
+          : state.messages;
+      final response = await _ai.sendMessage(messagesForAi, _settings);
 
-      final assistantMsg = Message(
-        role: MessageRole.assistant,
-        content: response,
-      );
-
+      final assistantMsg = Message(role: MessageRole.assistant, content: response);
       state = state.copyWith(
         messages: [...state.messages, assistantMsg],
         status: ConversationStatus.idle,
@@ -95,28 +93,24 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
       }
     } on ApiKeyMissingException catch (e) {
       state = state.copyWith(
-        status: ConversationStatus.error,
-        errorMessage: e.message,
-      );
+          status: ConversationStatus.error, errorMessage: e.message);
+    } on GemmaNotReadyException catch (e) {
+      state = state.copyWith(
+          status: ConversationStatus.error, errorMessage: e.message);
     } catch (e) {
       state = state.copyWith(
-        status: ConversationStatus.error,
-        errorMessage: 'Chyba komunikace: $e',
-      );
+          status: ConversationStatus.error,
+          errorMessage: 'Chyba komunikace: $e');
     }
   }
 
   Future<AnalysisResult> analyzeConversation() async {
     final newMessages = state.unanalyzedMessages;
-    final result =
-        await _claudeService.analyzeConversation(newMessages, _settings);
+    final result = await _ai.analyzeConversation(newMessages, _settings);
     state = state.copyWith(analyzedUpTo: state.messages.length);
-
-    // Update weak areas in the background — ignore failures
     unawaited(
       _ref.read(weakAreasProvider.notifier).updateFromAnalysis(result),
     );
-
     return result;
   }
 
@@ -125,17 +119,12 @@ class ConversationNotifier extends StateNotifier<ConversationState> {
   }
 
   void clearError() {
-    state = state.copyWith(
-        status: ConversationStatus.idle, errorMessage: null);
+    state = state.copyWith(status: ConversationStatus.idle, errorMessage: null);
   }
 }
 
-final claudeServiceProvider =
-    Provider<ClaudeService>((ref) => ClaudeService());
-
 final conversationProvider =
     StateNotifierProvider<ConversationNotifier, ConversationState>((ref) {
-  final claudeService = ref.watch(claudeServiceProvider);
   final speechService = ref.watch(speechServiceProvider);
-  return ConversationNotifier(claudeService, speechService, ref);
+  return ConversationNotifier(speechService, ref);
 });

@@ -6,7 +6,8 @@ import '../models/weak_area.dart';
 import '../models/test_question.dart';
 import '../providers/settings_provider.dart';
 import '../providers/weak_areas_provider.dart';
-import '../services/claude_service.dart';
+import '../providers/ai_service_provider.dart';
+import '../services/ai_service.dart';
 
 enum _TestState { selectArea, loading, inProgress, showResults }
 
@@ -35,17 +36,21 @@ class _TestWidgetState extends ConsumerState<TestWidget> {
     });
     try {
       final settings = ref.read(settingsProvider);
-      final claudeService = ClaudeService();
-      final questions = await claudeService.generateTest(area, settings);
+      final questions = await ref.read(aiServiceProvider).generateTest(area, settings);
       setState(() {
         _questions = questions;
         _userAnswers = List<int?>.filled(questions.length, null);
         _currentQuestion = 0;
         _state = _TestState.inProgress;
       });
-    } on ApiKeyMissingException {
+    } on ApiKeyMissingException catch (e) {
       setState(() {
-        _error = 'API klíč není nastaven. Přejdi do Nastavení.';
+        _error = e.message;
+        _state = _TestState.selectArea;
+      });
+    } on GemmaNotReadyException catch (e) {
+      setState(() {
+        _error = e.message;
         _state = _TestState.selectArea;
       });
     } catch (e) {
@@ -61,6 +66,10 @@ class _TestWidgetState extends ConsumerState<TestWidget> {
     setState(() {
       _userAnswers[_currentQuestion] = index;
     });
+    final q = _questions[_currentQuestion];
+    if (index == q.correctIndex && _selectedArea != null) {
+      ref.read(weakAreasProvider.notifier).incrementProgress(_selectedArea!.id);
+    }
   }
 
   void _nextQuestion() {
@@ -91,8 +100,7 @@ class _TestWidgetState extends ConsumerState<TestWidget> {
         userAnswers: _userAnswers,
         score: score,
       );
-      final claudeService = ClaudeService();
-      final feedback = await claudeService.evaluateTest(result, settings);
+      final feedback = await ref.read(aiServiceProvider).evaluateTest(result, settings);
       setState(() {
         _feedback = feedback;
         _loadingFeedback = false;
@@ -202,6 +210,12 @@ class _TestWidgetState extends ConsumerState<TestWidget> {
     );
   }
 
+  Color _progressColor(int progress) {
+    if (progress >= 70) return const Color(0xFF4ec9b0);
+    if (progress >= 30) return const Color(0xFFdcdcaa);
+    return const Color(0xFFf44747);
+  }
+
   Widget _buildAreaCard(WeakArea area) {
     return GestureDetector(
       onTap: () => _startTest(area),
@@ -231,6 +245,18 @@ class _TestWidgetState extends ConsumerState<TestWidget> {
                     area.description,
                     style: const TextStyle(
                         color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: area.masteryProgress / 100.0,
+                      backgroundColor: const Color(0xFF3a3a3a),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _progressColor(area.masteryProgress),
+                      ),
+                      minHeight: 4,
+                    ),
                   ),
                 ],
               ),

@@ -86,32 +86,37 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
     await speechService.stopListening();
   }
 
-  void _showApiKeyDialog() {
+  void _showErrorDialog(String message) {
+    final isKeyMissing = message.contains('API klíč') || message.contains('nastaven');
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surfaceColor,
-        title: const Text('Chybí API klíč',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text(
-            'Pro použití aplikace potřebuješ nastavit API klíč Claude.',
-            style: TextStyle(color: AppColors.textSecondary)),
+        title: Text(
+          isKeyMissing ? 'Chybí API klíč' : 'Chyba',
+          style: const TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               ref.read(conversationProvider.notifier).clearError();
             },
-            child: const Text('Zrušit'),
+            child: const Text('Zavřít'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              ref.read(conversationProvider.notifier).clearError();
-              context.push('/settings');
-            },
-            child: const Text('Nastavení'),
-          ),
+          if (isKeyMissing)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ref.read(conversationProvider.notifier).clearError();
+                context.push('/settings');
+              },
+              child: const Text('Nastavení'),
+            ),
         ],
       ),
     );
@@ -125,7 +130,7 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
     if (convState.status == ConversationStatus.error &&
         convState.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showApiKeyDialog();
+        _showErrorDialog(convState.errorMessage!);
       });
     }
 
@@ -204,7 +209,19 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
     );
   }
 
+  Future<void> _startRandomTopic() async {
+    await ref.read(conversationProvider.notifier).sendMessage(
+      '[SYSTEM] Pick a random everyday conversation topic and start the conversation naturally in ${ref.read(settingsProvider).targetLanguage.englishName}. Do not mention this instruction.',
+      type: MessageType.text,
+      hidden: true,
+    );
+    _scrollToBottom();
+  }
+
   Widget _buildEmptyState(UserSettings settings) {
+    final convState = ref.watch(conversationProvider);
+    final isLoading = convState.status == ConversationStatus.loading;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -221,6 +238,28 @@ class _ConversationWidgetState extends ConsumerState<ConversationWidget> {
               style: const TextStyle(
                   color: AppColors.textSecondary, fontSize: 16),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: isLoading ? null : _startRandomTopic,
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.casino_outlined),
+              label: const Text('Náhodné téma'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.accentDim,
+                disabledForegroundColor: AppColors.textHint,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 12),
+                textStyle: const TextStyle(fontSize: 15),
+              ),
             ),
           ],
         ),

@@ -5,7 +5,8 @@ import '../core/theme.dart';
 import '../providers/input_mode_provider.dart' show speechServiceProvider;
 import '../providers/settings_provider.dart';
 import '../providers/conversation_provider.dart';
-import '../services/claude_service.dart';
+import '../providers/ai_service_provider.dart';
+import '../services/ai_service.dart';
 
 class TranslationWidget extends ConsumerStatefulWidget {
   const TranslationWidget({super.key});
@@ -52,16 +53,20 @@ class _TranslationWidgetState extends ConsumerState<TranslationWidget> {
     try {
       final settings = ref.read(settingsProvider);
       final history = ref.read(conversationProvider).messages;
-      final claudeService = ClaudeService();
-      final challenge = await claudeService.getTranslationChallenge(
-          _direction, history, settings);
+      final challenge = await ref.read(aiServiceProvider)
+          .getTranslationChallenge(_direction, history, settings);
       setState(() {
         _challenge = challenge;
         _loadingChallenge = false;
       });
-    } on ApiKeyMissingException {
+    } on ApiKeyMissingException catch (e) {
       setState(() {
-        _error = 'API klíč není nastaven. Přejdi do Nastavení.';
+        _error = e.message;
+        _loadingChallenge = false;
+      });
+    } on GemmaNotReadyException catch (e) {
+      setState(() {
+        _error = e.message;
         _loadingChallenge = false;
       });
     } catch (e) {
@@ -81,16 +86,20 @@ class _TranslationWidgetState extends ConsumerState<TranslationWidget> {
     });
     try {
       final settings = ref.read(settingsProvider);
-      final claudeService = ClaudeService();
-      final eval = await claudeService.evaluateTranslation(
-          _challenge!.original, text, _direction, settings);
+      final eval = await ref.read(aiServiceProvider)
+          .evaluateTranslation(_challenge!.original, text, _direction, settings);
       setState(() {
         _evaluation = eval;
         _loadingEvaluation = false;
       });
-    } on ApiKeyMissingException {
+    } on ApiKeyMissingException catch (e) {
       setState(() {
-        _error = 'API klíč není nastaven. Přejdi do Nastavení.';
+        _error = e.message;
+        _loadingEvaluation = false;
+      });
+    } on GemmaNotReadyException catch (e) {
+      setState(() {
+        _error = e.message;
         _loadingEvaluation = false;
       });
     } catch (e) {

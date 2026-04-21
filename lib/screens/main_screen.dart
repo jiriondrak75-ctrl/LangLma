@@ -34,9 +34,14 @@ class MainScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.userBubbleBorder),
               ),
-              child: Text(
-                '${settings.targetLanguage.flag} ${settings.level.emoji}',
-                style: const TextStyle(fontSize: 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${settings.targetLanguage.flag} ${settings.level.emoji}',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ],
               ),
             ),
           ),

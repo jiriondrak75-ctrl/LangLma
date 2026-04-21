@@ -6,6 +6,7 @@ class WeakArea {
   final String description;
   final int occurrences;
   final DateTime lastSeen;
+  final int masteryProgress; // 0–100
 
   const WeakArea({
     required this.id,
@@ -13,7 +14,25 @@ class WeakArea {
     required this.description,
     required this.occurrences,
     required this.lastSeen,
+    this.masteryProgress = 0,
   });
+
+  WeakArea copyWith({
+    String? id,
+    String? category,
+    String? description,
+    int? occurrences,
+    DateTime? lastSeen,
+    int? masteryProgress,
+  }) =>
+      WeakArea(
+        id: id ?? this.id,
+        category: category ?? this.category,
+        description: description ?? this.description,
+        occurrences: occurrences ?? this.occurrences,
+        lastSeen: lastSeen ?? this.lastSeen,
+        masteryProgress: masteryProgress ?? this.masteryProgress,
+      );
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -21,6 +40,7 @@ class WeakArea {
         'description': description,
         'occurrences': occurrences,
         'lastSeen': lastSeen.toIso8601String(),
+        'masteryProgress': masteryProgress,
       };
 
   factory WeakArea.fromJson(Map<String, dynamic> json) => WeakArea(
@@ -32,5 +52,7 @@ class WeakArea {
         occurrences: json['occurrences'] as int? ?? 1,
         lastSeen: DateTime.tryParse(json['lastSeen'] as String? ?? '') ??
             DateTime.now(),
+        masteryProgress:
+            ((json['masteryProgress'] as int?) ?? 0).clamp(0, 100),
       );
 }

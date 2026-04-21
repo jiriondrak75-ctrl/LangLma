@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme.dart';
 import '../providers/app_mode_provider.dart';
 import '../providers/conversation_provider.dart';
-import '../services/claude_service.dart';
+import '../services/ai_service.dart';
 
 class AnalysisScreen extends ConsumerStatefulWidget {
   const AnalysisScreen({super.key});
